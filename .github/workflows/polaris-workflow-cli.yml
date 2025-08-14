@@ -25,25 +25,24 @@ jobs:
       BRIDGE_POLARIS_APPLICATION_NAME: ${{ github.event.repository.name }}
       BRIDGE_POLARIS_PROJECT_NAME: ${{ github.event.repository.name }}
       BRIDGE_POLARIS_BRANCH_NAME: ${{ github.event.ref_name }}
-      BRIDGE_POLARIS_WAITFORSCAN: "true"
       INCLUDE_DIAGNOSTICS: "true"
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
       - name: Setup Java JDK
         uses: actions/setup-java@v3
         with:
-          java-version: "17"
+          java-version: 17
           distribution: microsoft
           cache: maven
       - name: Polaris Full Scan
         if: ${{ github.event_name != 'pull_request' }}
-        run: |-
+        run: |
           curl -fLsS -o bridge.zip ${{ vars.BRIDGECLI_LINUX64 }} && unzip -qo -d $RUNNER_TEMP bridge.zip && rm -f bridge.zip
           $RUNNER_TEMP/bridge-cli --stage polaris
       - name: Polaris PR Scan
         if: ${{ github.event_name == 'pull_request' }}
-        run: |-
+        run: |
           curl -fLsS -o bridge.zip ${{ vars.BRIDGECLI_LINUX64 }} && unzip -qo -d $RUNNER_TEMP bridge.zip && rm -f bridge.zip
           $RUNNER_TEMP/bridge-cli --stage polaris \
               polaris.prcomment.enabled=true \
