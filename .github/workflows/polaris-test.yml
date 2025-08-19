@@ -16,7 +16,6 @@ jobs:
       id: polaris-scan
       uses: blackduck-inc/black-duck-security-scan@v2
       with:
-        polaris_server_url: ${{ vars.POLARIS_SERVER_URL }}
         polaris_application_name: ${{ github.repository_owner }}
         polaris_branch_name: ${{ github.head_ref || github.ref_name }}
         polaris_branch_parent_name: ${{ github.branch.parent.name || github.ref_name }}
@@ -24,4 +23,5 @@ jobs:
         polaris_assessment_types: "SCA,SAST"
         polaris_prComment_enabled: true
         include_diagnostics: true
+        polaris_server_url: ${{ vars.POLARIS_URL }}
         polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
