@@ -23,7 +23,7 @@ jobs:
           # polaris_waitForScan: false  # Used to support the async mode
           # project_directory: ${{ vars.PROJECT_DIRECTORY }}
           ########### Uncomment below configuration for source code upload 
-          # polaris_assessment_mode: "SOURCE_UPLOAD"
+          polaris_assessment_mode: "SOURCE_UPLOAD"
           polaris_test_sast_location: 'hybrid'
           # project_source_archive: ${{ vars.PROJECT_SOURCE_ARCHIVE }}
           # project_source_excludes: ${{ vars.PROJECT_SOURCE_EXCLUDES }} # Accepts Multiple Values
