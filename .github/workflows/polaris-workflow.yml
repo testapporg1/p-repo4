@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Polaris Full Scan
         if: ${{ github.event_name != 'pull_request' }}
-        uses: blackduck-inc/black-duck-security-scan@SIGINT-3335-updated
+        uses: blackduck-inc/black-duck-security-scan@v2.4.0
         with:
           polaris_server_url: ${{ vars.POLARIS_URL }}
           polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
@@ -53,7 +53,7 @@ jobs:
           # coverity_args: --config-override capture.build.build-command=mvn install
       - name: Polaris PR Scan
         if: ${{ github.event_name == 'pull_request' }}
-        uses: blackduck-inc/black-duck-security-scan@custom-header
+        uses: blackduck-inc/black-duck-security-scan@v2.4.0
         with:
           polaris_server_url: ${{ vars.POLARIS_URL }}
           polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
