@@ -46,23 +46,24 @@ jobs:
           else
             OS=$( [[ "$RUNNER_OS" == "macOS" ]] && ([[ "$(uname -m)" =~ arm ]] && echo macos_arm || echo macosx ) || ([[ "$(uname -m)" =~ arm ]] && echo linux_arm || echo linux64 ))
             curl -fLsS -o bridge.zip "$BASE_URL/bridge-cli-bundle-$OS.zip"
-            unzip -qo -d "$RUNNER_TEMP" bridge.zip
-            rm -f bridge.zip
-            chmod +x "$RUNNER_TEMP/bridge-cli"
+            unzip -qo -d "$RUNNER_TEMP" bridge.zip && rm -f bridge.zip
+            BRIDGE_DIR=$(find "$RUNNER_TEMP" -type d -name "bridge-cli-bundle-*")
+            chmod +x "$BRIDGE_DIR/bridge-cli" && echo "BRIDGE_CLI=$BRIDGE_DIR/bridge-cli" >> $GITHUB_ENV
           fi
       - name: Polaris Full Scan
         if: ${{ github.event_name != 'pull_request' }}
-        run: ${{ runner.temp }}/bridge-cli --stage polaris --diagnostics
+        run: ${{ env.BRIDGE_CLI }} --stage polaris --diagnostics
       - name: Polaris PR Scan
         if: ${{ github.event_name == 'pull_request' }}
         run: |-
-          ${{ runner.temp }}/bridge-cli --stage polaris \
+          ${{ env.BRIDGE_CLI }} --stage polaris \
                         polaris.prcomment.enabled=true \
                         polaris.branch.parent.name=${{ github.event.base_ref }} \
                         github.repository.branch.name=${{ github.ref_name }} \
                         github.repository.name=${{ github.event.repository.name }} \
                         github.repository.owner.name=${{ github.repository_owner }} \
                         github.repository.pull.number=${{ github.event.number }} \
+                        github.user.token=${{ secrets.GITHUB_TOKEN }}
 
 
       ### Uncomment below configuration to save logs
