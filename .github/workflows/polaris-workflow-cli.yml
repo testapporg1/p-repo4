@@ -38,17 +38,15 @@ jobs:
       - name: Checkout Source
         uses: actions/checkout@v4
       - name: Download & Setup Bridge CLI
-        run: |-
-          set -euo pipefail
-          BASE_URL="https://repo.blackduck.com/bds-integrations-release/com/blackduck/integration/bridge/binaries/bridge-cli-bundle/latest"
+        run: |
+          BASE="https://repo.blackduck.com/bds-integrations-release/com/blackduck/integration/bridge/binaries/bridge-cli-bundle/latest"
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            pwsh -Command "Invoke-WebRequest -Uri $BASE_URL/bridge-cli-bundle-win64.zip -OutFile bridge.zip; Expand-Archive -Path bridge.zip -DestinationPath $env:RUNNER_TEMP -Force; Remove-Item bridge.zip -Force"
+            pwsh -Command "Invoke-WebRequest $BASE/bridge-cli-bundle-win64.zip -OutFile bridge.zip; Expand-Archive bridge.zip $env:RUNNER_TEMP; echo BRIDGE_CLI=$(Get-ChildItem -Recurse $env:RUNNER_TEMP -Filter bridge-cli.exe | Select-Object -First 1) | Out-File $env:GITHUB_ENV -Append"
           else
-            OS=$( [[ "$RUNNER_OS" == "macOS" ]] && ([[ "$(uname -m)" =~ arm ]] && echo macos_arm || echo macosx ) || ([[ "$(uname -m)" =~ arm ]] && echo linux_arm || echo linux64 ))
-            curl -fLsS -o bridge.zip "$BASE_URL/bridge-cli-bundle-$OS.zip"
-            unzip -qo -d "$RUNNER_TEMP" bridge.zip && rm -f bridge.zip
-            BRIDGE_DIR=$(find "$RUNNER_TEMP" -type d -name "bridge-cli-bundle-*")
-            chmod +x "$BRIDGE_DIR/bridge-cli" && echo "BRIDGE_CLI=$BRIDGE_DIR/bridge-cli" >> $GITHUB_ENV
+            OS=$( [[ "$RUNNER_OS" == "macOS" ]] && ([[ $(uname -m) =~ arm ]] && echo macos_arm || echo macosx) || ([[ $(uname -m) =~ arm ]] && echo linux_arm || echo linux64 ))
+            curl -sSL -o bridge.zip $BASE/bridge-cli-bundle-$OS.zip
+            unzip -qo bridge.zip -d $RUNNER_TEMP
+            echo BRIDGE_CLI=$(find $RUNNER_TEMP -name bridge-cli | head -n1) >> $GITHUB_ENV
           fi
       - name: Polaris Full Scan
         if: ${{ github.event_name != 'pull_request' }}
