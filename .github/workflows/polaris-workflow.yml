@@ -1,74 +1,72 @@
-name: CI-Polaris 
+# Polaris Bridge CLI Documentation: https://documentation.blackduck.com/bundle/bridge/page/documentation/c_complete-list-of-bridge-commands.html
+name: Polaris Bridge CLI Scan
 on:
   push:
-    branches: [ main, master, develop, stage, release ]
+    branches:
+      - main
+      - master
+      - develop
+      - stage
+      - release
   pull_request:
-    branches: [ main, master, develop, stage, release ]  
+    branches:
+      - main
+      - master
+      - develop
+      - stage
+      - release
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
 jobs:
-  polaris-scan:
+  polaris:
     runs-on: ubuntu-latest
+    env:
+      BRIDGE_POLARIS_SERVERURL: ${{ vars.POLARIS_URL }}
+      BRIDGE_POLARIS_ACCESSTOKEN: ${{ secrets.POLARIS_ACCESS_TOKEN }}
+      BRIDGE_POLARIS_ASSESSMENT_TYPES: SAST,SCA
+      BRIDGE_POLARIS_APPLICATION_NAME: ${{ github.event.repository.name }}
+      BRIDGE_POLARIS_PROJECT_NAME: ${{ github.event.repository.name }}
+      BRIDGE_POLARIS_BRANCH_NAME: ${{ github.event.ref_name }}
+      BRIDGE_POLARIS_WAITFORSCAN: "true"
+      BRIDGE_POLARIS_REPORTS_SARIF_CREATE: "true"
+      BRIDGE_POLARIS_UPLOAD_SARIF_REPORT: "true"
+      BRIDGE_GITHUB_USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+      - name: Download & Setup Bridge CLI
+        run: |-
+          BASE="https://repo.blackduck.com/bds-integrations-release/com/blackduck/integration/bridge/binaries/bridge-cli-bundle/latest"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            pwsh -Command "Invoke-WebRequest $BASE/bridge-cli-bundle-win64.zip -OutFile bridge.zip; Expand-Archive bridge.zip $env:RUNNER_TEMP; echo BRIDGE_CLI=$(Get-ChildItem -Recurse $env:RUNNER_TEMP -Filter bridge-cli.exe | Select-Object -First 1) | Out-File $env:GITHUB_ENV -Append"
+          else
+            OS=$( [[ "$RUNNER_OS" == "macOS" ]] && ([[ $(uname -m) =~ arm ]] && echo macos_arm || echo macosx) || ([[ $(uname -m) =~ arm ]] && echo linux_arm || echo linux64 ))
+            curl -sSL -o bridge.zip $BASE/bridge-cli-bundle-$OS.zip
+            unzip -qo bridge.zip -d $RUNNER_TEMP
+            echo BRIDGE_CLI=$(find $RUNNER_TEMP -name bridge-cli | head -n1) >> $GITHUB_ENV
+          fi
       - name: Polaris Full Scan
         if: ${{ github.event_name != 'pull_request' }}
-        uses: blackduck-inc/black-duck-security-scan@v2.4.0
-        with:
-          polaris_server_url: ${{ vars.POLARIS_URL }}
-          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
-          polaris_application_name: ${{ github.event.repository.name }}
-          polaris_project_name: ${{ github.event.repository.name }}
-          polaris_assessment_types: "SCA,SAST"
-          bridgecli_download_url: "https://repo.blackduck.com/bds-integrations-release/com/blackduck/integration/bridge/binaries/bridge-cli-bundle/3.8.0/bridge-cli-bundle-3.8.0-linux64.zip"
-          # polaris_waitForScan: false  # Used to support the async mode
-          # project_directory: ${{ vars.PROJECT_DIRECTORY }}
-          ########### Uncomment below configuration for source code upload 
-          polaris_assessment_mode: "SOURCE_UPLOAD"
-          polaris_test_sast_location: 'hybrid'
-          # project_source_archive: ${{ vars.PROJECT_SOURCE_ARCHIVE }}
-          # project_source_excludes: ${{ vars.PROJECT_SOURCE_EXCLUDES }} # Accepts Multiple Values
-          # project_source_preserveSymLinks: true
-          ############ Uncomment below configuration if Bridge diagnostic files needs to be uploaded
-          include_diagnostics: true
-          ############ SARIF report generation and upload to GitHub Adavanced Security Tab: Uncomment below to enable
-          polaris_reports_sarif_create: true  
-          #polaris_reports_sarif_file_path: '/Users/renukac/test-sast/report.sarif.json' # File path (including file name) where SARIF report is created.
-          # polaris_reports_sarif_severities: "CRITICAL,HIGH"
-          # polaris_reports_sarif_groupSCAIssues: true 
-          # polaris_reports_sarif_issue_types: 'SCA, SAST' 
-          # polaris_upload_sarif_report: true 
-          # github_token: ${{ secrets.GITHUB_TOKEN }} # Required when polaris_upload_sarif_report is set as true
-          ###### Signature scan
-          polaris_test_sast_type: "SAST_FULL"
- 
-          ##### Polaris Local scan analysis
-          #polaris_test_sca_location: "hybrid"
-          #polaris_test_sast_location: "local"
-          ##### Uncomment below to add arbitrary CL parameters
-          # detect_search_depth: 2
-          # detect_args: '--detect.diagnostic=true'
-          # detect_config_path: '/Users/Config/application.properties'
-          # coverity_build_command: mvn clean install
-          # coverity_clean_command: mvn clean
-          # coverity_config_path: /Users/Config/coverity.yml
-          # coverity_args: --config-override capture.build.build-command=mvn install
+        run: ${{ env.BRIDGE_CLI }} --stage polaris --diagnostics
       - name: Polaris PR Scan
         if: ${{ github.event_name == 'pull_request' }}
-        uses: blackduck-inc/black-duck-security-scan@v2.4.0
-        with:
-          polaris_server_url: ${{ vars.POLARIS_URL }}
-          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
-          polaris_application_name: ${{ github.event.repository.name }}
-          polaris_project_name: ${{ github.event.repository.name }}
-          polaris_assessment_types: "SCA,SAST"
-          # project_directory: ${{ vars.PROJECT_DIRECTORY }}
-          ### Uncomment below configuration for source code upload 
-          # project_source_archive: ${{ vars.PROJECT_SOURCE_ARCHIVE }}
-          # project_source_excludes: ${{ vars.PROJECT_SOURCE_EXCLUDES }} # Accepts Multiple Values
-          # project_source_preserveSymLinks: true
-          ### Below configuration is used to enable feedback from Polaris security testing as pull request comment
-          polaris_prComment_enabled: true 
-          github_token: ${{ secrets.GITHUB_TOKEN }} 
-          # Mandatory when polaris_prComment_enabled is set to 'true'
-          ### Uncomment below configuration if Bridge diagnostic files needs to be uploaded
-          include_diagnostics: true
+        run: |-
+          ${{ env.BRIDGE_CLI }} --stage polaris  --diagnostics  \
+             polaris.prcomment.enabled=true  \
+             polaris.branch.parent.name=${{ github.event.base_ref }}  \
+             github.repository.branch.name=${{ github.ref_name }}  \
+             github.repository.name=${{ github.event.repository.name }}  \
+             github.repository.owner.name=${{ github.repository_owner }}  \
+             github.repository.pull.number=${{ github.event.number }}
+
+
+      ### Uncomment below configuration to save logs
+      # - name: Save Logs
+      #   if: always()
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: bridge-logs
+      #     path: ${{ github.workspace }}/.bridge
